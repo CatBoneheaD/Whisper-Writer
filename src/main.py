@@ -135,8 +135,9 @@ class WhisperWriterApp(QObject):
            ConfigManager.get_config_value('model_options', 'local', 'model_path') == path:
             return
         ConfigManager.set_config_value(name, 'model_options', 'local', 'model')
-        if path:
-            ConfigManager.set_config_value(path, 'model_options', 'local', 'model_path')
+        # Empty path => model isn't installed yet; clear model_path so faster-whisper
+        # downloads it by name (otherwise it would keep loading the previous model).
+        ConfigManager.set_config_value(path or '', 'model_options', 'local', 'model_path')
         ConfigManager.save_config()
 
         self.dashboard.set_status('loading')
@@ -148,6 +149,8 @@ class WhisperWriterApp(QObject):
         if model is not None:
             self.local_model = model
             self.dashboard.set_status('idle')
+            # A freshly downloaded model is now installed — refresh the picker marks.
+            self.dashboard._sync_model_combo()
         else:
             self.dashboard.set_status('error')
 

@@ -3,17 +3,17 @@ import sys
 from datetime import datetime
 
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint
-from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QBrush
+from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QBrush, QPalette, QFont
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton, QLineEdit,
     QComboBox, QCheckBox, QVBoxLayout, QHBoxLayout, QGridLayout, QScrollArea,
-    QStackedWidget, QButtonGroup, QFrame, QSizePolicy
+    QStackedWidget, QButtonGroup, QFrame, QSizePolicy, QDialog
 )
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui import theme
 from utils import ConfigManager
-from models import list_installed_models
+from models import list_installed_models, list_selectable_models
 
 
 class StatusDot(QWidget):
@@ -33,6 +33,135 @@ class StatusDot(QWidget):
         p.setBrush(QBrush(self._color))
         p.setPen(Qt.NoPen)
         p.drawEllipse(1, 1, 10, 10)
+
+
+_QT_NAMED = {
+    Qt.Key_Space: 'space', Qt.Key_Return: 'enter', Qt.Key_Enter: 'enter',
+    Qt.Key_Tab: 'tab', Qt.Key_Backspace: 'backspace', Qt.Key_Escape: 'esc',
+    Qt.Key_Up: 'up', Qt.Key_Down: 'down', Qt.Key_Left: 'left', Qt.Key_Right: 'right',
+    Qt.Key_Insert: 'insert', Qt.Key_Delete: 'delete', Qt.Key_Home: 'home', Qt.Key_End: 'end',
+    Qt.Key_PageUp: 'page_up', Qt.Key_PageDown: 'page_down',
+}
+_DIGIT_WORDS = {'0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four',
+                '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine'}
+_MOD_ORDER = ['ctrl', 'shift', 'alt', 'meta']
+
+
+def _qt_key_to_token(k):
+    """Map a Qt key code to the app's activation-key token (or None)."""
+    if Qt.Key_A <= k <= Qt.Key_Z:
+        return chr(k).lower()
+    if Qt.Key_0 <= k <= Qt.Key_9:
+        return _DIGIT_WORDS[chr(k)]
+    if Qt.Key_F1 <= k <= Qt.Key_F35:
+        return 'f' + str(k - Qt.Key_F1 + 1)
+    return _QT_NAMED.get(k)
+
+
+def _format_combo(tokens):
+    mods = [t for t in _MOD_ORDER if t in tokens]
+    rest = [t for t in tokens if t not in _MOD_ORDER]
+    return '+'.join(mods + rest)
+
+
+class HotkeyCaptureDialog(QDialog):
+    """Modal dialog that records the largest key combination the user holds down,
+    including modifier-only combos like Ctrl+Win."""
+
+    _MODS = {
+        Qt.Key_Control: 'ctrl', Qt.Key_Shift: 'shift', Qt.Key_Alt: 'alt',
+        Qt.Key_Meta: 'meta', Qt.Key_Super_L: 'meta', Qt.Key_Super_R: 'meta',
+    }
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setModal(True)
+        self.result_combo = ''
+        self._pressed = []
+        self._best = []
+
+        root = QWidget(self)
+        root.setObjectName('RootCard')
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.addWidget(root)
+        lay = QVBoxLayout(root)
+        lay.setContentsMargins(22, 20, 22, 18)
+        lay.setSpacing(12)
+
+        title = QLabel('Назначение горячей клавиши')
+        title.setObjectName('PageTitle')
+        lay.addWidget(title)
+
+        self.combo_label = QLabel('Зажмите сочетание…')
+        self.combo_label.setObjectName('HotkeyDisplay')
+        self.combo_label.setAlignment(Qt.AlignCenter)
+        lay.addWidget(self.combo_label)
+
+        hint = QLabel('Например: Ctrl + Win, либо Ctrl + Shift + Space.\nОтпустите клавиши и нажмите «Сохранить».')
+        hint.setObjectName('Hint')
+        hint.setAlignment(Qt.AlignCenter)
+        hint.setWordWrap(True)
+        lay.addWidget(hint)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        cancel = QPushButton('Отмена')
+        cancel.setObjectName('Ghost')
+        cancel.setCursor(Qt.PointingHandCursor)
+        cancel.clicked.connect(self.reject)
+        ok = QPushButton('Сохранить')
+        ok.setObjectName('Primary')
+        ok.setCursor(Qt.PointingHandCursor)
+        ok.clicked.connect(self._accept)
+        btn_row.addWidget(cancel)
+        btn_row.addWidget(ok)
+        lay.addLayout(btn_row)
+
+        self.resize(440, 240)
+        self.setStyleSheet(theme.QSS)
+        if parent:
+            c = parent.frameGeometry().center()
+            self.move(c.x() - self.width() // 2, c.y() - self.height() // 2)
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.grabKeyboard()
+        self.setFocus()
+
+    def _token(self, e):
+        return self._MODS.get(e.key()) or _qt_key_to_token(e.key())
+
+    def keyPressEvent(self, e):
+        if e.isAutoRepeat():
+            return
+        token = self._token(e)
+        if token and token not in self._pressed:
+            self._pressed.append(token)
+            if len(self._pressed) > len(self._best):
+                self._best = list(self._pressed)
+                self.combo_label.setText(_format_combo(self._best) or '…')
+
+    def keyReleaseEvent(self, e):
+        if e.isAutoRepeat():
+            return
+        token = self._token(e)
+        if token in self._pressed:
+            self._pressed.remove(token)
+
+    def _accept(self):
+        self.result_combo = _format_combo(self._best)
+        self.accept()
+
+    def closeEvent(self, event):
+        self.releaseKeyboard()
+        super().closeEvent(event)
+
+    def done(self, r):
+        self.releaseKeyboard()
+        super().done(r)
 
 
 class DashboardWindow(QMainWindow):
@@ -59,8 +188,8 @@ class DashboardWindow(QMainWindow):
         self.setWindowTitle('WhisperWriter by CatBoneheaD')
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.resize(820, 560)
-        self.setMinimumSize(720, 480)
+        self.resize(940, 660)
+        self.setMinimumSize(840, 580)
 
         root = QWidget()
         root.setObjectName('RootCard')
@@ -242,6 +371,12 @@ class DashboardWindow(QMainWindow):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         form_host = QWidget()
+        # Opaque background so widgets without their own fill (checkboxes) render
+        # crisp text — on the translucent window, text over transparency looks faint.
+        form_host.setAutoFillBackground(True)
+        _pal = form_host.palette()
+        _pal.setColor(QPalette.Window, QColor(theme.BG))
+        form_host.setPalette(_pal)
         grid = QGridLayout(form_host)
         grid.setContentsMargins(0, 0, 6, 0)
         grid.setHorizontalSpacing(16)
@@ -249,10 +384,30 @@ class DashboardWindow(QMainWindow):
         grid.setColumnStretch(1, 1)
 
         r = 0
-        # Hotkey
+        # Hotkey: manual field + "press keys" capture button
         self.f_hotkey = QLineEdit(ConfigManager.get_config_value('recording_options', 'activation_key') or '')
-        r = self._add_field(grid, r, 'Горячая клавиша', self.f_hotkey,
-                            'Например: ctrl+meta (Ctrl+Win), ctrl+shift+space')
+        capture_btn = QPushButton('⌨  Нажать клавиши')
+        capture_btn.setObjectName('Ghost')
+        capture_btn.setCursor(Qt.PointingHandCursor)
+        capture_btn.clicked.connect(self._capture_hotkey)
+        hk_row = QHBoxLayout()
+        hk_row.setSpacing(8)
+        hk_row.addWidget(self.f_hotkey, 1)
+        hk_row.addWidget(capture_btn)
+        hk_box = QVBoxLayout()
+        hk_box.setSpacing(3)
+        hk_box.addLayout(hk_row)
+        hk_hint = QLabel('Нажмите кнопку и зажмите нужное сочетание (например Ctrl+Win) — или впишите вручную.')
+        hk_hint.setObjectName('Hint')
+        hk_hint.setWordWrap(True)
+        hk_box.addWidget(hk_hint)
+        hk_host = QWidget()
+        hk_host.setLayout(hk_box)
+        hk_lbl = QLabel('Горячая клавиша')
+        hk_lbl.setObjectName('FieldLabel')
+        grid.addWidget(hk_lbl, r, 0, Qt.AlignTop | Qt.AlignRight)
+        grid.addWidget(hk_host, r, 1)
+        r += 1
 
         # Recording mode
         self.f_mode = QComboBox()
@@ -264,9 +419,33 @@ class DashboardWindow(QMainWindow):
             self.f_mode.setCurrentIndex(self._modes.index(cur_mode))
         r = self._add_field(grid, r, 'Режим записи', self.f_mode)
 
-        # Language
-        self.f_lang = QLineEdit(str(ConfigManager.get_config_value('model_options', 'common', 'language') or ''))
-        r = self._add_field(grid, r, 'Язык', self.f_lang, 'ISO-код, например ru или en')
+        # Language (dropdown)
+        self.f_lang = QComboBox()
+        self._langs = [
+            ('Авто (определять)', ''),
+            ('Русский', 'ru'), ('Английский', 'en'), ('Испанский', 'es'),
+            ('Итальянский', 'it'), ('Французский', 'fr'), ('Немецкий', 'de'),
+            ('Португальский', 'pt'), ('Польский', 'pl'), ('Украинский', 'uk'),
+            ('Китайский', 'zh'), ('Японский', 'ja'), ('Турецкий', 'tr'),
+        ]
+        for label, code in self._langs:
+            self.f_lang.addItem(label, code)
+        cur_lang = ConfigManager.get_config_value('model_options', 'common', 'language') or ''
+        self.f_lang.setCurrentIndex(
+            next((i for i, (l, c) in enumerate(self._langs) if c == cur_lang), 0))
+        r = self._add_field(grid, r, 'Язык', self.f_lang, 'Язык речи (или «Авто» — определить автоматически).')
+
+        # Task: transcribe vs translate-to-English
+        self.f_task = QComboBox()
+        self._tasks = [('Транскрибация (как сказано)', 'transcribe'),
+                       ('Перевод на английский', 'translate')]
+        for label, code in self._tasks:
+            self.f_task.addItem(label, code)
+        cur_task = ConfigManager.get_config_value('model_options', 'common', 'task') or 'transcribe'
+        self.f_task.setCurrentIndex(
+            next((i for i, (l, c) in enumerate(self._tasks) if c == cur_task), 0))
+        r = self._add_field(grid, r, 'Режим распознавания', self.f_task,
+                            'Перевод возможен только на английский (ограничение Whisper).')
 
         # Device
         self.f_device = QComboBox()
@@ -287,16 +466,19 @@ class DashboardWindow(QMainWindow):
         r = self._add_field(grid, r, 'Тип вычислений', self.f_compute)
 
         # Checkboxes
-        self.f_trailing_space = QCheckBox('Добавлять пробел в конце')
-        self.f_trailing_space.setChecked(bool(ConfigManager.get_config_value('post_processing', 'add_trailing_space')))
+        self.f_trailing_space = self._make_check(
+            'Добавлять пробел в конце',
+            bool(ConfigManager.get_config_value('post_processing', 'add_trailing_space')))
         grid.addWidget(self.f_trailing_space, r, 1); r += 1
 
-        self.f_noise = QCheckBox('Звук по завершении')
-        self.f_noise.setChecked(bool(ConfigManager.get_config_value('misc', 'noise_on_completion')))
+        self.f_noise = self._make_check(
+            'Звук по завершении',
+            bool(ConfigManager.get_config_value('misc', 'noise_on_completion')))
         grid.addWidget(self.f_noise, r, 1); r += 1
 
-        self.f_hide_status = QCheckBox('Скрывать всплывающий индикатор записи')
-        self.f_hide_status.setChecked(bool(ConfigManager.get_config_value('misc', 'hide_status_window')))
+        self.f_hide_status = self._make_check(
+            'Скрывать всплывающий индикатор записи',
+            bool(ConfigManager.get_config_value('misc', 'hide_status_window')))
         grid.addWidget(self.f_hide_status, r, 1); r += 1
 
         scroll.setWidget(form_host)
@@ -317,6 +499,24 @@ class DashboardWindow(QMainWindow):
         outer.addLayout(btn_row)
 
         return page
+
+    def _make_check(self, text, checked):
+        cb = QCheckBox(text)
+        cb.setChecked(checked)
+        cb.setCursor(Qt.PointingHandCursor)
+        # Force a readable text color via palette (QSS color on QCheckBox text is
+        # unreliable once ::indicator is styled), and a clear font.
+        pal = cb.palette()
+        pal.setColor(QPalette.WindowText, QColor(theme.TEXT))
+        pal.setColor(QPalette.Text, QColor(theme.TEXT))
+        cb.setPalette(pal)
+        cb.setFont(QFont('Segoe UI', 11))
+        return cb
+
+    def _capture_hotkey(self):
+        dlg = HotkeyCaptureDialog(self)
+        if dlg.exec_() == QDialog.Accepted and dlg.result_combo:
+            self.f_hotkey.setText(dlg.result_combo)
 
     def _add_field(self, grid, row, label, widget, hint=None):
         lbl = QLabel(label)
@@ -426,23 +626,24 @@ class DashboardWindow(QMainWindow):
     def _sync_model_combo(self):
         self.model_combo.blockSignals(True)
         self.model_combo.clear()
-        self._installed_models = list_installed_models()
-        cur_path = ConfigManager.get_config_value('model_options', 'local', 'model_path')
+        self._selectable_models = list_selectable_models()
         cur_name = ConfigManager.get_config_value('model_options', 'local', 'model')
         selected = 0
-        if not self._installed_models:
-            self.model_combo.addItem(cur_name or 'large-v3', cur_path)
-        else:
-            for i, m in enumerate(self._installed_models):
-                self.model_combo.addItem(m['name'], m['path'])
-                if (cur_path and m['path'] == cur_path) or (m['name'] == cur_name):
-                    selected = i
-            self.model_combo.setCurrentIndex(selected)
+        for i, m in enumerate(self._selectable_models):
+            mark = '✓' if m['installed'] else '⬇'
+            self.model_combo.addItem(f"{m['name']}  {mark}", (m['name'], m['path'] or ''))
+            if m['name'] == cur_name:
+                selected = i
+        self.model_combo.setItemData(
+            0, 'Модели: ✓ — установлена, ⬇ — скачается при выборе', Qt.ToolTipRole)
+        self.model_combo.setCurrentIndex(selected)
         self.model_combo.blockSignals(False)
 
     def _on_model_combo_changed(self, index):
-        name = self.model_combo.currentText()
-        path = self.model_combo.currentData()
+        data = self.model_combo.currentData()
+        if not data:
+            return
+        name, path = data
         if name:
             self.modelChanged.emit(name, path or '')
 
@@ -452,8 +653,10 @@ class DashboardWindow(QMainWindow):
                                        'recording_options', 'activation_key')
         ConfigManager.set_config_value(self._modes[self.f_mode.currentIndex()],
                                        'recording_options', 'recording_mode')
-        ConfigManager.set_config_value(self.f_lang.text().strip() or None,
+        ConfigManager.set_config_value(self.f_lang.currentData() or None,
                                        'model_options', 'common', 'language')
+        ConfigManager.set_config_value(self.f_task.currentData() or 'transcribe',
+                                       'model_options', 'common', 'task')
         ConfigManager.set_config_value(self._devices[self.f_device.currentIndex()],
                                        'model_options', 'local', 'device')
         ConfigManager.set_config_value(self._computes[self.f_compute.currentIndex()],

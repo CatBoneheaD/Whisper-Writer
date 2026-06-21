@@ -19,6 +19,13 @@ model_options:
       value: null
       type: str
       description: "A string used as an initial prompt to condition the transcription. More info: https://platform.openai.com/docs/guides/speech-to-text/prompting"
+    task:
+      value: transcribe
+      type: str
+      description: "transcribe = keep the spoken language; translate = translate the speech into English (Whisper only supports translation to English)."
+      options:
+        - transcribe
+        - translate
 
   # Configuration options for the OpenAI API
   api:

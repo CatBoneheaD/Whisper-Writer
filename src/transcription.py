@@ -56,7 +56,8 @@ def transcribe_local(audio_data, local_model=None):
     audio_data_float = audio_data.astype(np.float32) / 32768.0
 
     response = local_model.transcribe(audio=audio_data_float,
-                                      language=model_options['common']['language'],
+                                      language=model_options['common']['language'] or None,
+                                      task=model_options['common'].get('task') or 'transcribe',
                                       initial_prompt=model_options['common']['initial_prompt'],
                                       condition_on_previous_text=model_options['local']['condition_on_previous_text'],
                                       temperature=model_options['common']['temperature'],
@@ -79,13 +80,22 @@ def transcribe_api(audio_data):
     sf.write(byte_io, audio_data, sample_rate, format='wav')
     byte_io.seek(0)
 
-    response = client.audio.transcriptions.create(
-        model=model_options['api']['model'],
-        file=('audio.wav', byte_io, 'audio/wav'),
-        language=model_options['common']['language'],
-        prompt=model_options['common']['initial_prompt'],
-        temperature=model_options['common']['temperature'],
-    )
+    # 'translate' uses a different endpoint that always outputs English.
+    if (model_options['common'].get('task') or 'transcribe') == 'translate':
+        response = client.audio.translations.create(
+            model=model_options['api']['model'],
+            file=('audio.wav', byte_io, 'audio/wav'),
+            prompt=model_options['common']['initial_prompt'],
+            temperature=model_options['common']['temperature'],
+        )
+    else:
+        response = client.audio.transcriptions.create(
+            model=model_options['api']['model'],
+            file=('audio.wav', byte_io, 'audio/wav'),
+            language=model_options['common']['language'] or None,
+            prompt=model_options['common']['initial_prompt'],
+            temperature=model_options['common']['temperature'],
+        )
     return response.text
 
 def post_process_transcription(transcription):

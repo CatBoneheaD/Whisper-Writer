@@ -46,3 +46,26 @@ def list_installed_models():
         return _ORDER.index(name) if name in _ORDER else len(_ORDER)
 
     return [{'name': n, 'path': found[n]} for n in sorted(found, key=sort_key)]
+
+
+# Models offered in the UI. Multilingual only (so Russian etc. work). Non-installed
+# ones are downloaded automatically by faster-whisper on first use.
+SELECTABLE_MODELS = ['tiny', 'base', 'small', 'medium', 'large-v2', 'large-v3']
+
+
+def list_selectable_models():
+    """
+    Return the models to show in the picker: the standard multilingual set plus any
+    extra models already installed. Each dict: {'name', 'path' (or None), 'installed'}.
+    'path' is set only for installed models; non-installed ones download by name.
+    """
+    installed = {m['name']: m['path'] for m in list_installed_models()}
+    result = []
+    seen = set()
+    for name in SELECTABLE_MODELS:
+        result.append({'name': name, 'path': installed.get(name), 'installed': name in installed})
+        seen.add(name)
+    for name, path in installed.items():
+        if name not in seen:
+            result.append({'name': name, 'path': path, 'installed': True})
+    return result

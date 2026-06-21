@@ -66,7 +66,8 @@ QWidget {{
 
 QLineEdit, QComboBox {{
     background-color: {SURFACE_2}; border: 1px solid {BORDER};
-    border-radius: 9px; padding: 8px 10px; color: {TEXT}; selection-background-color: {ACCENT};
+    border-radius: 9px; padding: 9px 12px; min-height: 20px; font-size: 13px;
+    color: {TEXT}; selection-background-color: {ACCENT};
 }}
 QLineEdit:focus, QComboBox:focus {{ border: 1px solid {ACCENT}; }}
 QComboBox::drop-down {{ border: none; width: 22px; }}
@@ -75,12 +76,19 @@ QComboBox QAbstractItemView {{
     selection-background-color: {ACCENT}; outline: none; border-radius: 8px;
 }}
 
-QCheckBox {{ color: {TEXT}; spacing: 8px; }}
+QCheckBox {{ color: {TEXT}; font-size: 13px; spacing: 10px; padding: 4px 0; }}
 QCheckBox::indicator {{
-    width: 18px; height: 18px; border-radius: 5px;
+    width: 20px; height: 20px; border-radius: 5px;
     border: 1px solid {BORDER}; background: {SURFACE_2};
 }}
+QCheckBox::indicator:hover {{ border: 1px solid {ACCENT}; }}
 QCheckBox::indicator:checked {{ background: {ACCENT}; border: 1px solid {ACCENT}; }}
+
+#HotkeyDisplay {{
+    font-size: 22px; font-weight: 700; color: {ACCENT};
+    background: {SURFACE_2}; border: 1px solid {BORDER}; border-radius: 10px;
+    padding: 14px;
+}}
 
 QLabel#FieldLabel {{ color: {TEXT_DIM}; font-size: 12px; }}
 
