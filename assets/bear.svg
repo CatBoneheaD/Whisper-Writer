@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="fur" cx="42%" cy="34%" r="72%">
+      <stop offset="0%"  stop-color="#C8915C"/>
+      <stop offset="45%" stop-color="#A8703F"/>
+      <stop offset="82%" stop-color="#8A5430"/>
+      <stop offset="100%" stop-color="#704022"/>
+    </radialGradient>
+    <radialGradient id="furEar" cx="40%" cy="36%" r="75%">
+      <stop offset="0%"  stop-color="#B57E4B"/>
+      <stop offset="70%" stop-color="#8A5430"/>
+      <stop offset="100%" stop-color="#6A3C20"/>
+    </radialGradient>
+    <radialGradient id="innerEar" cx="50%" cy="50%" r="55%">
+      <stop offset="0%"  stop-color="#F0BC9A"/>
+      <stop offset="60%" stop-color="#D69877"/>
+      <stop offset="100%" stop-color="#6E4326"/>
+    </radialGradient>
+    <radialGradient id="muzzle" cx="50%" cy="38%" r="70%">
+      <stop offset="0%"  stop-color="#F4DCB6"/>
+      <stop offset="60%" stop-color="#E6C79A"/>
+      <stop offset="100%" stop-color="#CFA877"/>
+    </radialGradient>
+    <radialGradient id="nose" cx="38%" cy="30%" r="80%">
+      <stop offset="0%"  stop-color="#4A3024"/>
+      <stop offset="55%" stop-color="#2A1A12"/>
+      <stop offset="100%" stop-color="#160C08"/>
+    </radialGradient>
+    <radialGradient id="eye" cx="40%" cy="32%" r="75%">
+      <stop offset="0%"  stop-color="#4A2E1C"/>
+      <stop offset="55%" stop-color="#241510"/>
+      <stop offset="100%" stop-color="#0D0705"/>
+    </radialGradient>
+    <radialGradient id="topShine" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"  stop-color="#FFFFFF" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ================= EARS ================= -->
+  <g stroke="#5E3A20" stroke-width="6">
+    <circle cx="150" cy="152" r="66" fill="url(#furEar)"/>
+    <circle cx="362" cy="152" r="66" fill="url(#furEar)"/>
+  </g>
+  <circle cx="150" cy="156" r="37" fill="url(#innerEar)"/>
+  <circle cx="362" cy="156" r="37" fill="url(#innerEar)"/>
+  <circle cx="150" cy="160" r="19" fill="#C9826A" opacity="0.85"/>
+  <circle cx="362" cy="160" r="19" fill="#C9826A" opacity="0.85"/>
+
+  <!-- ================= HEAD ================= -->
+  <ellipse cx="256" cy="286" rx="172" ry="160" fill="url(#fur)" stroke="#5E3A20" stroke-width="6"/>
+  <!-- volume highlight on forehead -->
+  <ellipse cx="232" cy="210" rx="104" ry="62" fill="url(#topShine)"/>
+
+  <!-- fur texture strokes (cheeks / chin) -->
+  <g fill="none" stroke="#5E3A20" stroke-width="3" stroke-linecap="round" opacity="0.28">
+    <path d="M96 300 q14 16 6 36"/>
+    <path d="M110 340 q14 14 8 34"/>
+    <path d="M132 372 q14 12 10 30"/>
+    <path d="M416 300 q-14 16 -6 36"/>
+    <path d="M402 340 q-14 14 -8 34"/>
+    <path d="M380 372 q-14 12 -10 30"/>
+    <path d="M210 432 q12 12 6 26"/>
+    <path d="M256 440 q0 14 0 24"/>
+    <path d="M302 432 q-12 12 -6 26"/>
+  </g>
+
+  <!-- ================= EYEBROWS ================= -->
+  <g fill="none" stroke="#5E3A20" stroke-width="9" stroke-linecap="round" opacity="0.45">
+    <path d="M158 226 q40 -22 80 -4"/>
+    <path d="M354 226 q-40 -22 -80 -4"/>
+  </g>
+
+  <!-- ================= EYES ================= -->
+  <g stroke="#160C08" stroke-width="3">
+    <ellipse cx="190" cy="266" rx="27" ry="32" fill="url(#eye)"/>
+    <ellipse cx="322" cy="266" rx="27" ry="32" fill="url(#eye)"/>
+  </g>
+  <!-- eye highlights -->
+  <circle cx="181" cy="254" r="9"  fill="#FFFFFF" opacity="0.92"/>
+  <circle cx="313" cy="254" r="9"  fill="#FFFFFF" opacity="0.92"/>
+  <circle cx="198" cy="276" r="4"  fill="#FFFFFF" opacity="0.6"/>
+  <circle cx="330" cy="276" r="4"  fill="#FFFFFF" opacity="0.6"/>
+
+  <!-- ================= CHEEK BLUSH ================= -->
+  <ellipse cx="150" cy="330" rx="30" ry="17" fill="#E8927A" opacity="0.32"/>
+  <ellipse cx="362" cy="330" rx="30" ry="17" fill="#E8927A" opacity="0.32"/>
+
+  <!-- ================= MUZZLE ================= -->
+  <ellipse cx="256" cy="350" rx="100" ry="80" fill="url(#muzzle)" stroke="#C29A6A" stroke-width="3"/>
+
+  <!-- ================= NOSE ================= -->
+  <path d="M256 300
+           C 288 300, 302 316, 297 332
+           C 292 348, 274 356, 256 356
+           C 238 356, 220 348, 215 332
+           C 210 316, 224 300, 256 300 Z"
+        fill="url(#nose)" stroke="#160C08" stroke-width="2"/>
+  <ellipse cx="242" cy="316" rx="10" ry="6" fill="#FFFFFF" opacity="0.35"/>
+
+  <!-- ================= MOUTH ================= -->
+  <g fill="none" stroke="#3A2418" stroke-width="6" stroke-linecap="round">
+    <path d="M256 356 L256 380"/>
+    <path d="M256 380 Q228 402 202 384"/>
+    <path d="M256 380 Q284 402 310 384"/>
+  </g>
+</svg>

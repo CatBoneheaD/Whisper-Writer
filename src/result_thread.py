@@ -31,6 +31,7 @@ class ResultThread(QThread):
 
     statusSignal = pyqtSignal(str)
     resultSignal = pyqtSignal(str)
+    audioLevelSignal = pyqtSignal(float)
 
     def __init__(self, local_model=None):
         """
@@ -136,6 +137,8 @@ class ResultThread(QThread):
         def audio_callback(indata, frames, time, status):
             if status:
                 ConfigManager.console_print(f"Audio callback status: {status}")
+            rms = float(np.sqrt(np.mean(indata.astype(np.float32) ** 2)))
+            self.audioLevelSignal.emit(min(1.0, rms / 1500.0))
             audio_buffer.extend(indata[:, 0])
             data_ready.set()
 

@@ -130,3 +130,11 @@ dmypy.json
 
 # Configuration files
 config.yaml
+
+# WhisperWriter (CatBoneheaD fork) — local runtime files
+*.db
+src/history.db
+log.txt
+debug_run.py
+requirements_utf8.txt
+*.old.*

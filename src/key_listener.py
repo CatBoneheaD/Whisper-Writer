@@ -769,6 +769,11 @@ class PynputBackend(InputBackend):
             self.mouse = mouse
             self.key_map = self._create_key_map()
 
+        # Stop any previously running listeners first so repeated start() calls
+        # (e.g. after each transcription) don't stack multiple listeners that
+        # would each deliver the same key event and double the typed text.
+        self.stop()
+
         self.keyboard_listener = self.keyboard.Listener(
             on_press=self._on_keyboard_press,
             on_release=self._on_keyboard_release
