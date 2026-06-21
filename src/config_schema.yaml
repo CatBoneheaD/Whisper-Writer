@@ -149,6 +149,14 @@ post_processing:
     value: false
     type: bool
     description: "Set to true to convert the transcribed text to lowercase."
+  capitalize_sentences:
+    value: false
+    type: bool
+    description: "Capitalize the first letter of the transcription."
+  replacements:
+    value: []
+    type: list
+    description: "Spoken-to-text replacements applied after transcription, each as 'phrase => replacement' (e.g. 'новая строка => \\n')."
   input_method:
     value: pynput
     type: str
@@ -172,3 +180,14 @@ misc:
     value: false
     type: bool
     description: "Set to true to play a noise after the transcription has been typed out."
+  theme:
+    value: dark
+    type: str
+    description: "UI theme."
+    options:
+      - dark
+      - light
+  autostart:
+    value: false
+    type: bool
+    description: "Start WhisperWriter automatically when Windows starts."

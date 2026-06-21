@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import numpy as np
 import soundfile as sf
 from faster_whisper import WhisperModel
@@ -98,18 +99,46 @@ def transcribe_api(audio_data):
         )
     return response.text
 
+def _apply_replacements(text, rules):
+    """Apply 'phrase => replacement' rules (case-insensitive). Replacement may use
+    \\n / \\t. Tidies spaces around inserted punctuation and newlines."""
+    for rule in rules or []:
+        if not isinstance(rule, str) or '=>' not in rule:
+            continue
+        src, dst = rule.split('=>', 1)
+        src, dst = src.strip(), dst.strip()
+        if not src:
+            continue
+        dst = dst.replace('\\n', '\n').replace('\\t', '\t')
+        text = re.sub(re.escape(src), dst, text, flags=re.IGNORECASE | re.UNICODE)
+    text = re.sub(r'[ \t]+([.,!?;:])', r'\1', text)   # no space before punctuation
+    text = re.sub(r'[ \t]*\n[ \t]*', '\n', text)       # trim around newlines
+    return text
+
+
+def _capitalize_sentences(text):
+    text = re.sub(r'^(\s*)(\w)', lambda m: m.group(1) + m.group(2).upper(), text, count=1)
+    text = re.sub(r'([.!?]\s+)(\w)', lambda m: m.group(1) + m.group(2).upper(), text)
+    return text
+
+
 def post_process_transcription(transcription):
     """
     Apply post-processing to the transcription.
     """
     transcription = transcription.strip()
     post_processing = ConfigManager.get_config_section('post_processing')
+
+    transcription = _apply_replacements(transcription, post_processing.get('replacements'))
+
+    if post_processing.get('capitalize_sentences'):
+        transcription = _capitalize_sentences(transcription)
     if post_processing['remove_trailing_period'] and transcription.endswith('.'):
         transcription = transcription[:-1]
-    if post_processing['add_trailing_space']:
-        transcription += ' '
     if post_processing['remove_capitalization']:
         transcription = transcription.lower()
+    if post_processing['add_trailing_space']:
+        transcription += ' '
 
     return transcription
 

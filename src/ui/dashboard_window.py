@@ -7,13 +7,15 @@ from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QBrush, QPalette, QFon
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton, QLineEdit,
     QComboBox, QCheckBox, QVBoxLayout, QHBoxLayout, QGridLayout, QScrollArea,
-    QStackedWidget, QButtonGroup, QFrame, QSizePolicy, QDialog
+    QStackedWidget, QButtonGroup, QFrame, QSizePolicy, QDialog, QPlainTextEdit,
+    QProgressBar
 )
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from ui import theme
 from utils import ConfigManager
 from models import list_installed_models, list_selectable_models
+import autostart
 
 
 class StatusDot(QWidget):
@@ -169,6 +171,7 @@ class DashboardWindow(QMainWindow):
     modelChanged = pyqtSignal(str, str)   # name, path
     settingsSaved = pyqtSignal()
     requestExit = pyqtSignal()
+    reinsertRequested = pyqtSignal(str)   # type this text into the active window
 
     STATUS_LABELS = {
         'idle': 'Готов',
@@ -301,6 +304,13 @@ class DashboardWindow(QMainWindow):
         self.model_combo.setCursor(Qt.PointingHandCursor)
         self.model_combo.currentIndexChanged.connect(self._on_model_combo_changed)
         sb.addWidget(self.model_combo)
+
+        self.progress = QProgressBar()
+        self.progress.setTextVisible(False)
+        self.progress.setRange(0, 0)   # indeterminate (busy)
+        self.progress.setFixedHeight(6)
+        self.progress.hide()
+        sb.addWidget(self.progress)
 
         lay.addWidget(status_box)
 
@@ -465,11 +475,35 @@ class DashboardWindow(QMainWindow):
             self.f_compute.setCurrentIndex(self._computes.index(cur_ct))
         r = self._add_field(grid, r, 'Тип вычислений', self.f_compute)
 
+        # Theme
+        self.f_theme = QComboBox()
+        self._themes = [('Тёмная', 'dark'), ('Светлая', 'light')]
+        for label, code in self._themes:
+            self.f_theme.addItem(label, code)
+        cur_theme = ConfigManager.get_config_value('misc', 'theme') or 'dark'
+        self.f_theme.setCurrentIndex(
+            next((i for i, (l, c) in enumerate(self._themes) if c == cur_theme), 0))
+        r = self._add_field(grid, r, 'Тема оформления', self.f_theme)
+
+        # Replacements editor
+        self.f_replacements = QPlainTextEdit()
+        self.f_replacements.setPlaceholderText('новая строка => \\n\nточка => .\nзапятая => ,')
+        self.f_replacements.setFixedHeight(110)
+        rules = ConfigManager.get_config_value('post_processing', 'replacements') or []
+        self.f_replacements.setPlainText('\n'.join(rules))
+        r = self._add_field(grid, r, 'Замены текста', self.f_replacements,
+                            'По строке: «фраза => замена». Голосовые команды, пунктуация, переносы (\\n).')
+
         # Checkboxes
         self.f_trailing_space = self._make_check(
             'Добавлять пробел в конце',
             bool(ConfigManager.get_config_value('post_processing', 'add_trailing_space')))
         grid.addWidget(self.f_trailing_space, r, 1); r += 1
+
+        self.f_capitalize = self._make_check(
+            'Заглавная буква в начале предложений',
+            bool(ConfigManager.get_config_value('post_processing', 'capitalize_sentences')))
+        grid.addWidget(self.f_capitalize, r, 1); r += 1
 
         self.f_noise = self._make_check(
             'Звук по завершении',
@@ -481,17 +515,20 @@ class DashboardWindow(QMainWindow):
             bool(ConfigManager.get_config_value('misc', 'hide_status_window')))
         grid.addWidget(self.f_hide_status, r, 1); r += 1
 
+        self.f_autostart = self._make_check('Запускать при старте Windows', autostart.is_enabled())
+        grid.addWidget(self.f_autostart, r, 1); r += 1
+
         scroll.setWidget(form_host)
         outer.addWidget(scroll, 1)
 
-        note = QLabel('После сохранения приложение перезапустится, чтобы применить настройки.')
+        note = QLabel('Настройки применяются сразу после сохранения.')
         note.setObjectName('Hint')
         note.setWordWrap(True)
         outer.addWidget(note)
 
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
-        save_btn = QPushButton('Сохранить и перезапустить')
+        save_btn = QPushButton('Сохранить')
         save_btn.setObjectName('Primary')
         save_btn.setCursor(Qt.PointingHandCursor)
         save_btn.clicked.connect(self._save_settings)
@@ -572,6 +609,13 @@ class DashboardWindow(QMainWindow):
         top.addWidget(time_lbl)
         top.addStretch(1)
 
+        insert_btn = QPushButton('▸')
+        insert_btn.setObjectName('IconBtn')
+        insert_btn.setFixedSize(28, 26)
+        insert_btn.setToolTip('Вставить в активное окно')
+        insert_btn.setCursor(Qt.PointingHandCursor)
+        insert_btn.clicked.connect(lambda _, t=row['text']: self._reinsert(t))
+
         copy_btn = QPushButton('⧉')
         copy_btn.setObjectName('IconBtn')
         copy_btn.setFixedSize(28, 26)
@@ -586,6 +630,7 @@ class DashboardWindow(QMainWindow):
         del_btn.setCursor(Qt.PointingHandCursor)
         del_btn.clicked.connect(lambda _, i=row['id']: self._delete(i))
 
+        top.addWidget(insert_btn)
         top.addWidget(copy_btn)
         top.addWidget(del_btn)
         lay.addLayout(top)
@@ -613,6 +658,11 @@ class DashboardWindow(QMainWindow):
     def _copy(self, text):
         QApplication.clipboard().setText(text)
         self.status_text.setText('Скопировано ✓')
+
+    def _reinsert(self, text):
+        # Hide the window so focus returns to the previous app, then type there.
+        self.hide()
+        self.reinsertRequested.emit(text)
 
     def _delete(self, item_id):
         self.history.delete(item_id)
@@ -663,10 +713,19 @@ class DashboardWindow(QMainWindow):
                                        'model_options', 'local', 'compute_type')
         ConfigManager.set_config_value(self.f_trailing_space.isChecked(),
                                        'post_processing', 'add_trailing_space')
+        ConfigManager.set_config_value(self.f_capitalize.isChecked(),
+                                       'post_processing', 'capitalize_sentences')
+        rules = [ln.strip() for ln in self.f_replacements.toPlainText().splitlines() if ln.strip()]
+        ConfigManager.set_config_value(rules, 'post_processing', 'replacements')
+        ConfigManager.set_config_value(self.f_theme.currentData() or 'dark',
+                                       'misc', 'theme')
         ConfigManager.set_config_value(self.f_noise.isChecked(),
                                        'misc', 'noise_on_completion')
         ConfigManager.set_config_value(self.f_hide_status.isChecked(),
                                        'misc', 'hide_status_window')
+        # Autostart is applied immediately (registry), and mirrored in config.
+        autostart.set_enabled(self.f_autostart.isChecked())
+        ConfigManager.set_config_value(self.f_autostart.isChecked(), 'misc', 'autostart')
         ConfigManager.save_config()
         self.settingsSaved.emit()
 
@@ -674,6 +733,7 @@ class DashboardWindow(QMainWindow):
     def set_status(self, status):
         self.status_text.setText(self.STATUS_LABELS.get(status, status))
         self.status_dot.set_color(theme.STATUS_COLORS.get(status, theme.TEXT_DIM))
+        self.progress.setVisible(status == 'loading')
         if status == 'recording':
             self.set_recording(True)
         elif status in ('idle', 'error'):

@@ -1,135 +1,162 @@
-"""Dark theme (Voice Ink-inspired) for WhisperWriter."""
+"""Theming for WhisperWriter — dark (Voice Ink-inspired) and light palettes.
 
-# Palette
-BG = "#15161c"          # window background
-SURFACE = "#1e202a"     # cards / panels
-SURFACE_2 = "#272a36"   # inputs / hover
-BORDER = "#323645"
-TEXT = "#e7e9f0"
-TEXT_DIM = "#9aa0b4"
-ACCENT = "#7c5cff"       # primary accent (violet)
-ACCENT_HOVER = "#8f72ff"
-ACCENT_SOFT = "#2a2546"
-DANGER = "#ff5c72"
-OK = "#46d18b"
+Call set_theme('dark'|'light') before building windows. Module-level names
+(BG, TEXT, ACCENT, QSS, STATUS_COLORS, ...) reflect the active theme so existing
+code that reads e.g. theme.TEXT keeps working.
+"""
 
-# Status colors
-STATUS_COLORS = {
-    'idle': OK,
-    'recording': "#ff5c72",
-    'transcribing': "#ffb454",
-    'loading': "#ffb454",
-    'error': DANGER,
+DARK = {
+    'BG': '#15161c', 'SURFACE': '#1e202a', 'SURFACE_2': '#272a36', 'BORDER': '#323645',
+    'TEXT': '#e7e9f0', 'TEXT_DIM': '#9aa0b4',
+    'ACCENT': '#7c5cff', 'ACCENT_HOVER': '#8f72ff', 'ACCENT_SOFT': '#2a2546',
+    'DANGER': '#ff5c72', 'OK': '#46d18b', 'WARN': '#ffb454',
 }
 
-QSS = f"""
+LIGHT = {
+    'BG': '#f3f4f8', 'SURFACE': '#ffffff', 'SURFACE_2': '#eaecf2', 'BORDER': '#d4d8e2',
+    'TEXT': '#1c2030', 'TEXT_DIM': '#697086',
+    'ACCENT': '#6b4dff', 'ACCENT_HOVER': '#5a3df0', 'ACCENT_SOFT': '#e6e0ff',
+    'DANGER': '#e0455a', 'OK': '#1faf6b', 'WARN': '#bf8420',
+}
+
+PALETTES = {'dark': DARK, 'light': LIGHT}
+
+
+def build_qss(c):
+    return f"""
 QWidget {{
-    color: {TEXT};
+    color: {c['TEXT']};
     font-family: 'Segoe UI';
     font-size: 13px;
 }}
 
 #RootCard {{
-    background-color: {BG};
-    border: 1px solid {BORDER};
+    background-color: {c['BG']};
+    border: 1px solid {c['BORDER']};
     border-radius: 16px;
 }}
 
 /* Title bar */
 #TitleBar {{ background: transparent; }}
-#TitleLabel {{ font-size: 14px; font-weight: 600; color: {TEXT}; }}
-#Byline {{ font-size: 12px; color: {ACCENT}; font-weight: 600; }}
-#Credit {{ font-size: 11px; color: {TEXT_DIM}; padding-top: 4px; }}
+#TitleLabel {{ font-size: 14px; font-weight: 600; color: {c['TEXT']}; }}
+#Byline {{ font-size: 12px; color: {c['ACCENT']}; font-weight: 600; }}
+#Credit {{ font-size: 11px; color: {c['TEXT_DIM']}; padding-top: 4px; }}
 #WinBtn {{
-    background: transparent; border: none; color: {TEXT_DIM};
+    background: transparent; border: none; color: {c['TEXT_DIM']};
     font-size: 16px; border-radius: 6px;
 }}
-#WinBtn:hover {{ background: {SURFACE_2}; color: {TEXT}; }}
-#CloseBtn:hover {{ background: {DANGER}; color: white; }}
+#WinBtn:hover {{ background: {c['SURFACE_2']}; color: {c['TEXT']}; }}
+#CloseBtn:hover {{ background: {c['DANGER']}; color: white; }}
 
 /* Sidebar */
-#Sidebar {{ background-color: {SURFACE}; border-radius: 12px; }}
+#Sidebar {{ background-color: {c['SURFACE']}; border-radius: 12px; }}
 #NavBtn {{
     text-align: left; padding: 10px 14px; border: none; border-radius: 9px;
-    background: transparent; color: {TEXT_DIM}; font-size: 13px;
+    background: transparent; color: {c['TEXT_DIM']}; font-size: 13px;
 }}
-#NavBtn:hover {{ background: {SURFACE_2}; color: {TEXT}; }}
-#NavBtn:checked {{ background: {ACCENT_SOFT}; color: {TEXT}; font-weight: 600; }}
+#NavBtn:hover {{ background: {c['SURFACE_2']}; color: {c['TEXT']}; }}
+#NavBtn:checked {{ background: {c['ACCENT_SOFT']}; color: {c['TEXT']}; font-weight: 600; }}
 
-#StatusBox {{ background-color: {SURFACE_2}; border-radius: 10px; }}
-#StatusText {{ color: {TEXT}; font-size: 12px; font-weight: 600; }}
-#StatusSub {{ color: {TEXT_DIM}; font-size: 11px; }}
+#StatusBox {{ background-color: {c['SURFACE_2']}; border-radius: 10px; }}
+#StatusText {{ color: {c['TEXT']}; font-size: 12px; font-weight: 600; }}
+#StatusSub {{ color: {c['TEXT_DIM']}; font-size: 11px; }}
 
 /* Content */
-#PageTitle {{ font-size: 18px; font-weight: 700; color: {TEXT}; }}
-#Hint {{ color: {TEXT_DIM}; font-size: 12px; }}
+#PageTitle {{ font-size: 18px; font-weight: 700; color: {c['TEXT']}; }}
+#Hint {{ color: {c['TEXT_DIM']}; font-size: 12px; }}
 
-QLineEdit, QComboBox {{
-    background-color: {SURFACE_2}; border: 1px solid {BORDER};
+QLineEdit, QComboBox, QPlainTextEdit {{
+    background-color: {c['SURFACE_2']}; border: 1px solid {c['BORDER']};
     border-radius: 9px; padding: 9px 12px; min-height: 20px; font-size: 13px;
-    color: {TEXT}; selection-background-color: {ACCENT};
+    color: {c['TEXT']}; selection-background-color: {c['ACCENT']};
 }}
-QLineEdit:focus, QComboBox:focus {{ border: 1px solid {ACCENT}; }}
+QLineEdit:focus, QComboBox:focus, QPlainTextEdit:focus {{ border: 1px solid {c['ACCENT']}; }}
 QComboBox::drop-down {{ border: none; width: 22px; }}
 QComboBox QAbstractItemView {{
-    background-color: {SURFACE_2}; border: 1px solid {BORDER};
-    selection-background-color: {ACCENT}; outline: none; border-radius: 8px;
+    background-color: {c['SURFACE_2']}; border: 1px solid {c['BORDER']};
+    selection-background-color: {c['ACCENT']}; outline: none; border-radius: 8px;
 }}
 
-QCheckBox {{ color: {TEXT}; font-size: 13px; spacing: 10px; padding: 4px 0; }}
+QCheckBox {{ color: {c['TEXT']}; font-size: 13px; spacing: 10px; padding: 4px 0; }}
 QCheckBox::indicator {{
     width: 20px; height: 20px; border-radius: 5px;
-    border: 1px solid {BORDER}; background: {SURFACE_2};
+    border: 1px solid {c['BORDER']}; background: {c['SURFACE_2']};
 }}
-QCheckBox::indicator:hover {{ border: 1px solid {ACCENT}; }}
-QCheckBox::indicator:checked {{ background: {ACCENT}; border: 1px solid {ACCENT}; }}
+QCheckBox::indicator:hover {{ border: 1px solid {c['ACCENT']}; }}
+QCheckBox::indicator:checked {{ background: {c['ACCENT']}; border: 1px solid {c['ACCENT']}; }}
 
 #HotkeyDisplay {{
-    font-size: 22px; font-weight: 700; color: {ACCENT};
-    background: {SURFACE_2}; border: 1px solid {BORDER}; border-radius: 10px;
+    font-size: 22px; font-weight: 700; color: {c['ACCENT']};
+    background: {c['SURFACE_2']}; border: 1px solid {c['BORDER']}; border-radius: 10px;
     padding: 14px;
 }}
 
-QLabel#FieldLabel {{ color: {TEXT_DIM}; font-size: 12px; }}
+QLabel#FieldLabel {{ color: {c['TEXT_DIM']}; font-size: 12px; }}
 
 /* Buttons */
 QPushButton#Primary {{
-    background-color: {ACCENT}; color: white; border: none;
+    background-color: {c['ACCENT']}; color: white; border: none;
     border-radius: 10px; padding: 10px 18px; font-weight: 600;
 }}
-QPushButton#Primary:hover {{ background-color: {ACCENT_HOVER}; }}
+QPushButton#Primary:hover {{ background-color: {c['ACCENT_HOVER']}; }}
 QPushButton#Ghost {{
-    background-color: {SURFACE_2}; color: {TEXT}; border: 1px solid {BORDER};
+    background-color: {c['SURFACE_2']}; color: {c['TEXT']}; border: 1px solid {c['BORDER']};
     border-radius: 10px; padding: 10px 18px;
 }}
-QPushButton#Ghost:hover {{ border: 1px solid {ACCENT}; }}
+QPushButton#Ghost:hover {{ border: 1px solid {c['ACCENT']}; }}
 
 /* History card */
 #HistoryCard {{
-    background-color: {SURFACE}; border: 1px solid {BORDER}; border-radius: 12px;
+    background-color: {c['SURFACE']}; border: 1px solid {c['BORDER']}; border-radius: 12px;
 }}
-#CardTime {{ color: {TEXT_DIM}; font-size: 11px; }}
-#CardText {{ color: {TEXT}; font-size: 13px; }}
+#CardTime {{ color: {c['TEXT_DIM']}; font-size: 11px; }}
+#CardText {{ color: {c['TEXT']}; font-size: 13px; }}
 #IconBtn {{
-    background: {SURFACE_2}; border: 1px solid {BORDER}; border-radius: 8px;
-    color: {TEXT_DIM}; font-size: 13px; padding: 4px;
+    background: {c['SURFACE_2']}; border: 1px solid {c['BORDER']}; border-radius: 8px;
+    color: {c['TEXT_DIM']}; font-size: 13px; padding: 4px;
 }}
-#IconBtn:hover {{ color: {TEXT}; border: 1px solid {ACCENT}; }}
-#EmptyHint {{ color: {TEXT_DIM}; font-size: 13px; }}
+#IconBtn:hover {{ color: {c['TEXT']}; border: 1px solid {c['ACCENT']}; }}
+#EmptyHint {{ color: {c['TEXT_DIM']}; font-size: 13px; }}
 
 /* Big record button */
 #RecordBtn {{
-    background-color: {ACCENT}; color: white; border: none;
+    background-color: {c['ACCENT']}; color: white; border: none;
     border-radius: 12px; padding: 14px; font-size: 14px; font-weight: 700;
 }}
-#RecordBtn:hover {{ background-color: {ACCENT_HOVER}; }}
-#RecordBtn[recording="true"] {{ background-color: {DANGER}; }}
+#RecordBtn:hover {{ background-color: {c['ACCENT_HOVER']}; }}
+#RecordBtn[recording="true"] {{ background-color: {c['DANGER']}; }}
+
+/* Progress bar (model download/load) */
+QProgressBar {{
+    background: {c['SURFACE_2']}; border: none; border-radius: 4px;
+    height: 6px; text-align: center; color: transparent;
+}}
+QProgressBar::chunk {{ background: {c['ACCENT']}; border-radius: 4px; }}
 
 /* Scrollbar */
 QScrollArea {{ border: none; background: transparent; }}
 QScrollBar:vertical {{ background: transparent; width: 10px; margin: 2px; }}
-QScrollBar::handle:vertical {{ background: {BORDER}; border-radius: 5px; min-height: 30px; }}
-QScrollBar::handle:vertical:hover {{ background: {TEXT_DIM}; }}
+QScrollBar::handle:vertical {{ background: {c['BORDER']}; border-radius: 5px; min-height: 30px; }}
+QScrollBar::handle:vertical:hover {{ background: {c['TEXT_DIM']}; }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
 QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: none; }}
 """
+
+
+def set_theme(name):
+    """Activate a theme by name and refresh module-level color/QSS globals."""
+    c = PALETTES.get(name, DARK)
+    g = globals()
+    g['ACTIVE'] = name if name in PALETTES else 'dark'
+    g['_C'] = c
+    for k, v in c.items():
+        g[k] = v
+    g['STATUS_COLORS'] = {
+        'idle': c['OK'], 'recording': c['DANGER'], 'transcribing': c['WARN'],
+        'loading': c['WARN'], 'error': c['DANGER'],
+    }
+    g['QSS'] = build_qss(c)
+
+
+# Initialize to dark by default.
+set_theme('dark')

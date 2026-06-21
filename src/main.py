@@ -3,9 +3,11 @@ import sys
 import time
 import ctypes
 from audioplayer import AudioPlayer
-from PyQt5.QtCore import QObject, QProcess, QThread, QSharedMemory, pyqtSignal
+from PyQt5.QtCore import QObject, QProcess, QThread, QSharedMemory, QTimer, pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction
+
+from ui import theme
 
 ICON_PATH = os.path.join('assets', 'ww-logo.ico')
 APP_ID = 'WhisperWriter.VoiceTyping'
@@ -57,11 +59,15 @@ class WhisperWriterApp(QObject):
             sys.exit(0)
 
         ConfigManager.initialize()
+        theme.set_theme(ConfigManager.get_config_value('misc', 'theme') or 'dark')
         self.history = HistoryStore()
 
         self._rec_start = 0.0
         self._rec_duration = 0.0
+        self._reinsert_text = ''
         self.model_loader = None
+        self._cur_device = None
+        self._cur_compute = None
 
         self.initialize_components()
 
@@ -74,6 +80,8 @@ class WhisperWriterApp(QObject):
         self.key_listener.add_callback("on_deactivate", self.on_deactivation)
 
         model_options = ConfigManager.get_config_section('model_options')
+        self._cur_device = ConfigManager.get_config_value('model_options', 'local', 'device')
+        self._cur_compute = ConfigManager.get_config_value('model_options', 'local', 'compute_type')
         self.local_model = create_local_model() if not model_options.get('use_api') else None
 
         self.result_thread = None
@@ -81,9 +89,7 @@ class WhisperWriterApp(QObject):
 
         self.dashboard = DashboardWindow(self.history)
         self.dashboard.setWindowIcon(self._app_icon)
-        self.dashboard.recordToggle.connect(self.on_activation)
-        self.dashboard.modelChanged.connect(self.change_model)
-        self.dashboard.settingsSaved.connect(self.restart_app)
+        self._connect_dashboard()
 
         if not ConfigManager.get_config_value('misc', 'hide_status_window'):
             self.status_window = StatusWindow()
@@ -94,6 +100,12 @@ class WhisperWriterApp(QObject):
         self.create_tray_icon()
         self.key_listener.start()
         self.dashboard.show()
+
+    def _connect_dashboard(self):
+        self.dashboard.recordToggle.connect(self.on_activation)
+        self.dashboard.modelChanged.connect(self.change_model)
+        self.dashboard.settingsSaved.connect(self.apply_settings)
+        self.dashboard.reinsertRequested.connect(self.on_reinsert)
 
     def create_tray_icon(self):
         """Create the system tray icon and its context menu."""
@@ -107,7 +119,7 @@ class WhisperWriterApp(QObject):
         tray_menu.addAction(show_action)
 
         settings_action = QAction('Настройки', self.app)
-        settings_action.triggered.connect(self.dashboard.open_settings)
+        settings_action.triggered.connect(self.open_settings)
         tray_menu.addAction(settings_action)
 
         tray_menu.addSeparator()
@@ -128,6 +140,69 @@ class WhisperWriterApp(QObject):
         self.dashboard.show()
         self.dashboard.raise_()
         self.dashboard.activateWindow()
+
+    def open_settings(self):
+        self.dashboard.open_settings()
+
+    def on_reinsert(self, text):
+        """Type a history entry into whatever window is focused after we hid ours."""
+        self._reinsert_text = text
+        QTimer.singleShot(350, self._do_reinsert)
+
+    def _do_reinsert(self):
+        if not self._reinsert_text:
+            return
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
+        self.input_simulator.typewrite(self._reinsert_text, hwnd)
+        self._reinsert_text = ''
+
+    def apply_settings(self):
+        """Apply saved settings live, without restarting the app."""
+        # Theme change → rebuild the dashboard with the new palette.
+        new_theme = ConfigManager.get_config_value('misc', 'theme') or 'dark'
+        if new_theme != getattr(theme, 'ACTIVE', 'dark'):
+            theme.set_theme(new_theme)
+            self._rebuild_dashboard()
+
+        # Hotkey / mode / backend → reload the key listener.
+        try:
+            self.key_listener.stop()
+            self.key_listener.update_activation_keys()
+            self.key_listener.start()
+        except Exception as e:
+            ConfigManager.console_print(f'Key listener reload failed: {e}')
+
+        # Status window visibility.
+        hide = ConfigManager.get_config_value('misc', 'hide_status_window')
+        if hide and self.status_window:
+            self.status_window = None
+        elif not hide and not self.status_window:
+            self.status_window = StatusWindow()
+            self.status_window.setWindowIcon(self._app_icon)
+
+        # Reload the model only if device/compute type changed (expensive).
+        dev = ConfigManager.get_config_value('model_options', 'local', 'device')
+        ct = ConfigManager.get_config_value('model_options', 'local', 'compute_type')
+        if (dev, ct) != (self._cur_device, self._cur_compute):
+            self._cur_device, self._cur_compute = dev, ct
+            self.dashboard.set_status('loading')
+            self.model_loader = ModelLoadThread()
+            self.model_loader.loaded.connect(self._on_model_loaded)
+            self.model_loader.start()
+
+    def _rebuild_dashboard(self):
+        """Recreate the dashboard window (used when the theme changes)."""
+        old = self.dashboard
+        was_visible = old.isVisible()
+        geo = old.geometry()
+        self.dashboard = DashboardWindow(self.history)
+        self.dashboard.setWindowIcon(self._app_icon)
+        self.dashboard.setGeometry(geo)
+        self._connect_dashboard()
+        old.hide()
+        old.deleteLater()
+        if was_visible:
+            self.dashboard.open_settings()
 
     def change_model(self, name, path):
         """Switch the active local model (loaded off the UI thread)."""

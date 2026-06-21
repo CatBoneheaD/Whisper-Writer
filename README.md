@@ -9,19 +9,23 @@ This is a customized fork by **CatBoneheaD** — a modernized dark UI, transcrip
 > 🐻 Speak anywhere. Your text shows up where your cursor is.
 
 <p align="center">
+  <img src="./assets/demo.gif" alt="WhisperWriter demo" width="660">
+</p>
+<p align="center">
   <img src="./assets/screenshot-history.png" alt="WhisperWriter dashboard — History" width="660">
 </p>
 
 ## ✨ What's new in this fork
 
-- **Modern dark dashboard** (Voice Ink-style): sidebar with History / Settings, live status indicator.
-- **Transcription history** stored locally in SQLite — search, one-click copy, delete.
-- **In-app model switcher** — switch between installed Whisper models on the fly (no config editing).
-- **Settings UI** — hotkey, recording mode, language, device, compute type and more, no YAML required.
-- **Silent launch** — starts via `launch.vbs` with no black console window; lives in the system tray.
+- **Modern dashboard** (Voice Ink-style) with **dark & light themes** — sidebar with History / Settings, live status indicator.
+- **Transcription history** stored locally in SQLite — search, one-click copy, re-insert into the active window, delete.
+- **In-app model switcher** — full multilingual set (tiny…large-v3); not-installed models download on selection (with a progress indicator).
+- **Language picker & translation** — choose the spoken language from a list, or translate speech to English.
+- **Text post-processing** — spoken-command replacements (`новая строка => \n`, `точка => .`), auto-capitalization, trailing space.
+- **Settings UI** — hotkey (with a **press-to-capture** button), recording mode, language, device, theme, autostart and more — no YAML required. Changes apply **without restarting**.
+- **Start with Windows** (optional) and **silent launch** via `launch.vbs` (no console window); lives in the system tray.
 - **Single-instance guard** — a second launch won't start a duplicate (no more doubled text).
-- **Proper taskbar icon** + custom bear icon (`assets/bear.svg`, rendered to PNG/ICO).
-- **Close-to-tray** — the ✕ button hides to the tray; minimize keeps it in the taskbar.
+- **Proper taskbar icon** + custom bear icon (`assets/bear.svg`, rendered to PNG/ICO). ✕ hides to tray, minimize keeps it in the taskbar.
 
 ## 🎙 Recording modes
 
