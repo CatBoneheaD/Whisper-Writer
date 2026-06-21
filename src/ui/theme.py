@@ -126,6 +126,17 @@ QPushButton#Ghost:hover {{ border: 1px solid {c['ACCENT']}; }}
 #RecordBtn:hover {{ background-color: {c['ACCENT_HOVER']}; }}
 #RecordBtn[recording="true"] {{ background-color: {c['DANGER']}; }}
 
+/* Volume slider */
+QSlider::groove:horizontal {{
+    height: 6px; background: {c['SURFACE_2']}; border-radius: 3px;
+}}
+QSlider::sub-page:horizontal {{ background: {c['ACCENT']}; border-radius: 3px; }}
+QSlider::handle:horizontal {{
+    background: {c['ACCENT']}; width: 16px; height: 16px;
+    margin: -6px 0; border-radius: 8px;
+}}
+QSlider::handle:horizontal:hover {{ background: {c['ACCENT_HOVER']}; }}
+
 /* Progress bar (model download/load) */
 QProgressBar {{
     background: {c['SURFACE_2']}; border: none; border-radius: 4px;

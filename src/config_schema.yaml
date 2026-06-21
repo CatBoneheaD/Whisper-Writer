@@ -180,6 +180,14 @@ misc:
     value: false
     type: bool
     description: "Set to true to play a noise after the transcription has been typed out."
+  completion_sound:
+    value: assets/sounds/soft.wav
+    type: str
+    description: "Path to the sound played when transcription completes."
+  completion_volume:
+    value: 35
+    type: int
+    description: "Volume of the completion sound (0-100)."
   theme:
     value: dark
     type: str

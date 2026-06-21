@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import ctypes
-from audioplayer import AudioPlayer
 from PyQt5.QtCore import QObject, QProcess, QThread, QSharedMemory, QTimer, pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction
@@ -20,6 +19,7 @@ from ui.status_window import StatusWindow
 from transcription import create_local_model
 from input_simulation import InputSimulator
 from history import HistoryStore
+from sound import play_completion_sound
 from utils import ConfigManager
 
 
@@ -309,7 +309,7 @@ class WhisperWriterApp(QObject):
         self.target_window = None
 
         if ConfigManager.get_config_value('misc', 'noise_on_completion'):
-            AudioPlayer(os.path.join('assets', 'beep.wav')).play(block=True)
+            play_completion_sound()
 
         if ConfigManager.get_config_value('recording_options', 'recording_mode') == 'continuous':
             self.start_result_thread()

@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel, QPushButton, QLineEdit,
     QComboBox, QCheckBox, QVBoxLayout, QHBoxLayout, QGridLayout, QScrollArea,
     QStackedWidget, QButtonGroup, QFrame, QSizePolicy, QDialog, QPlainTextEdit,
-    QProgressBar
+    QProgressBar, QSlider
 )
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -510,6 +510,45 @@ class DashboardWindow(QMainWindow):
             bool(ConfigManager.get_config_value('misc', 'noise_on_completion')))
         grid.addWidget(self.f_noise, r, 1); r += 1
 
+        # Completion sound: pick a sound + volume + preview
+        self.f_sound = QComboBox()
+        self._sounds = [
+            ('Мягкий', 'assets/sounds/soft.wav'),
+            ('Колокольчик', 'assets/sounds/ding.wav'),
+            ('Поп', 'assets/sounds/pop.wav'),
+            ('Маримба', 'assets/sounds/marimba.wav'),
+            ('Блип', 'assets/sounds/blip.wav'),
+            ('Бип (старый)', 'assets/beep.wav'),
+        ]
+        for label, pth in self._sounds:
+            self.f_sound.addItem(label, pth)
+        cur_sound = ConfigManager.get_config_value('misc', 'completion_sound') or 'assets/sounds/soft.wav'
+        self.f_sound.setCurrentIndex(
+            next((i for i, (l, pth) in enumerate(self._sounds) if pth == cur_sound), 0))
+        preview_btn = QPushButton('▶ Прослушать')
+        preview_btn.setObjectName('Ghost')
+        preview_btn.setCursor(Qt.PointingHandCursor)
+        preview_btn.clicked.connect(self._preview_sound)
+        srow = QHBoxLayout(); srow.setSpacing(8)
+        srow.addWidget(self.f_sound, 1); srow.addWidget(preview_btn)
+
+        self.f_volume = QSlider(Qt.Horizontal)
+        self.f_volume.setRange(0, 100)
+        self.f_volume.setValue(int(ConfigManager.get_config_value('misc', 'completion_volume') or 35))
+        self.f_volume.setCursor(Qt.PointingHandCursor)
+        self.vol_label = QLabel(f'Громкость: {self.f_volume.value()}%')
+        self.vol_label.setObjectName('Hint')
+        self.f_volume.valueChanged.connect(lambda v: self.vol_label.setText(f'Громкость: {v}%'))
+
+        sbox = QVBoxLayout(); sbox.setSpacing(6)
+        sbox.addLayout(srow)
+        sbox.addWidget(self.f_volume)
+        sbox.addWidget(self.vol_label)
+        shost = QWidget(); shost.setLayout(sbox)
+        slbl = QLabel('Звук завершения'); slbl.setObjectName('FieldLabel')
+        grid.addWidget(slbl, r, 0, Qt.AlignTop | Qt.AlignRight)
+        grid.addWidget(shost, r, 1); r += 1
+
         self.f_hide_status = self._make_check(
             'Скрывать всплывающий индикатор записи',
             bool(ConfigManager.get_config_value('misc', 'hide_status_window')))
@@ -554,6 +593,12 @@ class DashboardWindow(QMainWindow):
         dlg = HotkeyCaptureDialog(self)
         if dlg.exec_() == QDialog.Accepted and dlg.result_combo:
             self.f_hotkey.setText(dlg.result_combo)
+
+    def _preview_sound(self):
+        from sound import play_completion_sound
+        # Keep a reference so non-blocking playback isn't garbage-collected mid-sound.
+        self._preview_player = play_completion_sound(
+            self.f_sound.currentData(), self.f_volume.value(), block=False)
 
     def _add_field(self, grid, row, label, widget, hint=None):
         lbl = QLabel(label)
@@ -721,6 +766,10 @@ class DashboardWindow(QMainWindow):
                                        'misc', 'theme')
         ConfigManager.set_config_value(self.f_noise.isChecked(),
                                        'misc', 'noise_on_completion')
+        ConfigManager.set_config_value(self.f_sound.currentData(),
+                                       'misc', 'completion_sound')
+        ConfigManager.set_config_value(self.f_volume.value(),
+                                       'misc', 'completion_volume')
         ConfigManager.set_config_value(self.f_hide_status.isChecked(),
                                        'misc', 'hide_status_window')
         # Autostart is applied immediately (registry), and mirrored in config.
