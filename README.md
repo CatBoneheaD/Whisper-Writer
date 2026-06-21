@@ -8,6 +8,10 @@ This is a customized fork by **CatBoneheaD** — a modernized dark UI, transcrip
 
 > 🐻 Speak anywhere. Your text shows up where your cursor is.
 
+<p align="center">
+  <img src="./assets/screenshot-history.png" alt="WhisperWriter dashboard — History" width="660">
+</p>
+
 ## ✨ What's new in this fork
 
 - **Modern dark dashboard** (Voice Ink-style): sidebar with History / Settings, live status indicator.
@@ -64,6 +68,10 @@ Double-click **`launch.vbs`** — it starts the app silently with `pythonw.exe` 
 ## ⚙️ Configuration
 
 Everything can be set in the in-app **Settings** page. Settings are saved to `config.yaml` (this file is git-ignored, so your personal config stays local). If a value is missing, sensible defaults from `src/config_schema.yaml` are used.
+
+<p align="center">
+  <img src="./assets/screenshot-settings.png" alt="WhisperWriter dashboard — Settings" width="660">
+</p>
 
 <details>
 <summary>Full list of options</summary>
